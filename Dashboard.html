@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nubile Business — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <div class="bg-layer"></div>
+  <div class="grid-layer"></div>
+
+  <div class="auth-wrap">
+    <a href="/" class="logo">
+      <div class="logo-mark"></div>
+      Nubile Business
+    </a>
+
+    <div class="auth-card">
+      <div class="badge">Authenticated</div>
+      <h1>Welcome to <span class="gradient">Nubile</span></h1>
+      <p class="auth-desc">
+        You're signed in as <strong id="email" style="color:var(--neon)">…</strong>
+      </p>
+
+      <button id="logoutBtn" class="btn btn-primary btn-block">
+        Log out
+      </button>
+    </div>
+  </div>
+
+  <script src="/script.js"></script>
+  <script>
+    const token = sessionStorage.getItem('nubile_token');
+    if (!token) window.location.href = '/';
+
+    fetch('/api/me', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    })
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((d) => { document.getElementById('email').textContent = d.email; })
+      .catch(() => {
+        sessionStorage.removeItem('nubile_token');
+        window.location.href = '/';
+      });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/
