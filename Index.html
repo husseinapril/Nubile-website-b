@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nubile Business — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <div class="bg-layer"></div>
+  <div class="grid-layer"></div>
+
+  <div class="auth-wrap">
+    <a href="/" class="logo">
+      <div class="logo-mark"></div>
+      Nubile Business
+    </a>
+
+    <div class="auth-card">
+      <div class="badge">Secure Access</div>
+      <h1>Sign in to <span class="gradient">Nubile</span></h1>
+      <p class="auth-desc">
+        Enter your email and we'll send a 6-digit verification code.
+        No passwords. No friction.
+      </p>
+
+      <form id="loginForm" class="auth-form" novalidate>
+        <label for="email">Email address</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          placeholder="you@company.com"
+          autocomplete="email"
+          autofocus>
+
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+          <span class="btn-text">Send verification code →</span>
+          <span class="btn-loader hidden"><span class="spinner"></span> Sending…</span>
+        </button>
+
+        <p id="error" class="error hidden"></p>
+      </form>
+
+      <p class="auth-foot">Protected by <strong>Nubile Shield</strong></p>
+    </div>
+
+    <div class="auth-links">
+      <span class="status">All systems operational</span>
+    </div>
+  </div>
+
+  <script src="/script.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const err = document.getElementById('error');
+      const btn = document.getElementById('submitBtn');
+      const btnText = btn.querySelector('.btn-text');
+      const btnLoader = btn.querySelector('.btn-loader');
+
+      err.classList.add('hidden');
+      btn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoader.classList.remove('hidden');
+
+      try {
+        const r = await fetch('/api/request-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Something went wrong');
+
+        sessionStorage.setItem('nubile_email', email);
+        window.location.href = '/verify.html';
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoader.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+  </html>
