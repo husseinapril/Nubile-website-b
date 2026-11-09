@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nubile Business — Verify</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <div class="bg-layer"></div>
+  <div class="grid-layer"></div>
+
+  <div class="auth-wrap">
+    <a href="/" class="logo">
+      <div class="logo-mark"></div>
+      Nubile Business
+    </a>
+
+    <div class="auth-card">
+      <div class="badge">Verification</div>
+      <h1>Check your <span class="gradient">inbox</span></h1>
+      <p class="auth-desc">
+        We sent a 6-digit code to <strong id="sentTo" style="color:var(--neon)">…</strong>
+      </p>
+
+      <form id="verifyForm" class="auth-form" novalidate>
+        <label for="code">Verification code</label>
+        <input
+          id="code"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          pattern="[0-9]{6}"
+          placeholder="000000"
+          class="code-input"
+          autocomplete="one-time-code"
+          required
+          autofocus>
+
+        <button type="submit" class="btn btn-primary btn-block" id="submitBtn">
+          <span class="btn-text">Verify &amp; sign in →</span>
+          <span class="btn-loader hidden"><span class="spinner"></span> Verifying…</span>
+        </button>
+
+        <p id="error" class="error hidden"></p>
+        <p id="success" class="success hidden"></p>
+      </form>
+
+      <div class="timer">
+        Code expires in <strong id="countdown">10:00</strong>
+      </div>
+
+      <button type="button" id="resendBtn" class="btn btn-ghost btn-block" style="width:100%;">
+        Resend code
+      </button>
+      <a href="/" class="btn btn-ghost btn-block" style="width:100%; text-align:center; text-decoration:none;">
+        ← Use a different email
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const email = sessionStorage.getItem('nubile_email');
+    if (!email) {
+      window.location.href = '/';
+    }
+    document.getElementById('sentTo').textContent = email;
+
+    // Countdown
+    let countdownInterval;
+    function startCountdown(seconds) {
+      if (countdownInterval) clearInterval(countdownInterval);
+      const end = Date.now() + seconds * 1000;
+      const el = document.getElementById('countdown');
+      countdownInterval = setInterval(() => {
+        const remaining = Math.max(0, Math.floor((end - Date.now()) / 1000));
+        const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const s = String(remaining % 60).padStart(2, '0');
+        el.textContent = `${m}:${s}`;
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          el.textContent = 'expired';
+        }
+      }, 250);
+    }
+    startCountdown(600);
+
+    // Auto-advance numeric-only
+    document.getElementById('code').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    // Verify
+    document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('code').value.trim();
+      const err = document.getElementById('error');
+      const success = document.getElementById('success');
+      const btn = document.getElementById('submitBtn');
+      const btnText = btn.querySelector('.btn-text');
+      const btnLoader = btn.querySelector('.btn-loader');
+
+      err.classList.add('hidden');
+      success.classList.add('hidden');
+
+      if (!/^\d{6}$/.test(code)) {
+        err.textContent = 'Please enter the 6-digit code.';
+        err.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoader.classList.remove('hidden');
+
+      try {
+        const r = await fetch('/api/verify-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Verification failed');
+
+        success.textContent = '✓ Success! Redirecting…';
+        success.classList.remove('hidden');
+        sessionStorage.setItem('nubile_token', data.token);
+        sessionStorage.removeItem('nubile_email');
+
+        setTimeout(() => { window.location.href = '/dashboard'; }, 800);
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoader.classList.add('hidden');
+      }
+    });
+
+    // Resend
+    document.getElementById('resendBtn').addEventListener('click', async () => {
+      const err = document.getElementById('error');
+      const success = document.getElementById('success');
+      err.classList.add('hidden');
+      success.classList.add('hidden');
+
+      try {
+        const r = await fetch('/api/request-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Could not resend');
+        success.textContent = '✓ New code sent. Check your inbox.';
+        success.classList.remove('hidden');
+        startCountdown(600);
+      } catch (ex) {
+        err.textContent = ex.message;
+        err.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
